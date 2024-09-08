@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weight Tracker Widget</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .result {
+            margin-top: 5px;
+        }
+        .unit-select {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .progress-container {
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            position: relative;
+            height: 20px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background-color: #4CAF50;
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease-in-out;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: black;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weight Tracker</h1>
+        <div class="unit-select">
+            <label for="unitSelect">Select Unit:</label>
+            <select id="unitSelect" onchange="changeUnit()">
+                <option value="kg">Kilograms (kg)</option>
+                <option value="lbs">Pounds (lbs)</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="startWeight">Starting Weight:</label>
+            <input type="number" id="startWeight" step="0.1" onchange="calculate()">
+        </div>
+        <div class="input-group">
+            <label for="currentWeight">Current Weight:</label>
+            <input type="number" id="currentWeight" step="0.1" onchange="calculate()">
+        </div>
+        <div class="input-group">
+            <label for="goalWeight">Goal Weight:</label>
+            <input type="number" id="goalWeight" step="0.1" onchange="calculate()">
+        </div>
+        <div class="input-group">
+            <label>Left to Achieve Goal:</label>
+            <div class="progress-container">
+                <div id="leftToGoalBar" class="progress-bar"></div>
+                <div id="leftToGoal" class="progress-text"></div>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Weight Lost:</label>
+            <div class="progress-container">
+                <div id="weightLostBar" class="progress-bar"></div>
+                <div id="weightLost" class="progress-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isKg = true;
+        const kgToLbs = 2.20462;
+
+        function changeUnit() {
+            const newUnit = document.getElementById('unitSelect').value;
+            isKg = newUnit === 'kg';
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                if (input.value) {
+                    input.value = isKg ? 
+                        (parseFloat(input.value) / kgToLbs).toFixed(1) : 
+                        (parseFloat(input.value) * kgToLbs).toFixed(1);
+                }
+            });
+            calculate();
+            saveToLocalStorage();
+        }
+
+        function calculate() {
+            const startWeight = parseFloat(document.getElementById('startWeight').value) || 0;
+            const currentWeight = parseFloat(document.getElementById('currentWeight').value) || 0;
+            const goalWeight = parseFloat(document.getElementById('goalWeight').value) || 0;
+
+            const leftToGoal = Math.max(currentWeight - goalWeight, 0).toFixed(1);
+            const weightLost = Math.max(startWeight - currentWeight, 0).toFixed(1);
+            const totalToLose = Math.max(startWeight - goalWeight, 0);
+
+            const unit = isKg ? 'kg' : 'lbs';
+            document.getElementById('leftToGoal').textContent = `${leftToGoal} ${unit}`;
+            document.getElementById('weightLost').textContent = `${weightLost} ${unit}`;
+
+            // Update progress bars
+            const leftToGoalPercentage = Math.min(100, (1 - leftToGoal / totalToLose) * 100) || 0;
+            const weightLostPercentage = Math.min(100, (weightLost / totalToLose) * 100) || 0;
+
+            document.getElementById('leftToGoalBar').style.width = `${leftToGoalPercentage}%`;
+            document.getElementById('weightLostBar').style.width = `${weightLostPercentage}%`;
+
+            saveToLocalStorage();
+        }
+
+        function saveToLocalStorage() {
+            const data = {
+                isKg: isKg,
+                startWeight: document.getElementById('startWeight').value,
+                currentWeight: document.getElementById('currentWeight').value,
+                goalWeight: document.getElementById('goalWeight').value
+            };
+            localStorage.setItem('weightTrackerData', JSON.stringify(data));
+        }
+
+        function loadFromLocalStorage() {
+            const data = JSON.parse(localStorage.getItem('weightTrackerData'));
+            if (data) {
+                isKg = data.isKg;
+                document.getElementById('unitSelect').value = isKg ? 'kg' : 'lbs';
+                document.getElementById('startWeight').value = data.startWeight;
+                document.getElementById('currentWeight').value = data.currentWeight;
+                document.getElementById('goalWeight').value = data.goalWeight;
+                calculate();
+            }
+        }
+
+        loadFromLocalStorage();
+    </script>
+</body>
+</html>
